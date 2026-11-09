@@ -2,5 +2,5 @@
 
 Desenvolvido por: 
 - Rui Fernandes (a129857)
-- Luo Hang (a??????)
+- Luo Hang (a122669)
 
