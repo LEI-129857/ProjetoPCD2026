@@ -16,6 +16,7 @@ import iscot.client.gui.LightIcon;
 import iscot.client.gui.VentilatorIcon;
 import iscot.enums.Areas;
 import iscot.enums.Type;
+import iscot.events.AreaVentilationOrderEvent;
 
 public class Ventilator {
 
@@ -54,13 +55,20 @@ public class Ventilator {
 			janela.setMinimumSize(janela.getSize());
 			janela.pack();
 			janela.setVisible(true);
-			
-			Thread.sleep(5000);
-			ventilator.setAtivo(true);
 
-			// TODO: receive and handle messages from server
-			
+			Thread.sleep(5000);
+
 			// TODO: for first phase: create an appropriate event hardcoded locally and change the GUI accordingly
+			System.out.println("--- Simulando a receção de um evento do servidor ---");
+
+			// 1. 本地硬编码创建一个模拟的“通风指令”事件 (假设指令要求开启风扇: true)
+			// 注意：这里需要 import 你刚刚写的 AreaVentilationOrderEvent
+			AreaVentilationOrderEvent mockEvent = new AreaVentilationOrderEvent("Decider_01", area, true);
+
+			System.out.println("[Consumir Evento] Ordem de ventilação recebida. Ação ligar: " + mockEvent.isActionOn());
+
+			// 2. 根据事件的内容，动态改变 GUI 界面的状态
+			ventilator.setLigado(mockEvent.isActionOn());
 		}
 	}
 }
