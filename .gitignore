@@ -3,3 +3,6 @@ bin/
 
 # Ficheiros compilados do Java
 *.class
+
+# IDE
+.zed/
