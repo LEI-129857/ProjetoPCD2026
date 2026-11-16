@@ -1,72 +1,70 @@
 package iscot.client;
 
-import iscot.client.gui.ACIcon;
-import iscot.client.gui.IrrigationIcon;
-import iscot.client.gui.LightIcon;
 import iscot.client.gui.SensorControl;
-import iscot.client.gui.VentilatorIcon;
-import iscot.enums.AirConditioningMode;
 import iscot.enums.Areas;
+import iscot.events.GroundMoistureSensorEvent;
+import iscot.events.LightSensorEvent;
+import iscot.events.TemperatureSensorEvent;
 
 import java.awt.GridLayout;
-import java.awt.BorderLayout;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JButton;
-
 
 public class FrameTest {
+    private final JFrame frame;
+    private final CorretorMensagens broker;
 
-    private JFrame frame;
 
     public static void main(String[] args) {
-        FrameTest window = new FrameTest();
-		window.open();
+
+        CorretorMensagens sharedTable = new CorretorMensagens();
+
+
+        Decider cerebro = new Decider(sharedTable);
+        cerebro.setName("Decisor-Principal");
+        cerebro.start();
+
+
+        FrameTest window = new FrameTest(sharedTable);
+        window.open();
     }
 
-    public FrameTest() {
-        this.frame = new JFrame("ClientUI");
+    public FrameTest(CorretorMensagens broker) {
+        this.broker = broker;
+        this.frame = new JFrame("Painel de Sensores (Produtores)");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        addFrameContent();
+        frame.setLayout(new GridLayout(1, 3, 10, 10));
+        Areas area = Areas.LivingRoom;
+        Areas areaJardim = Areas.Garden;
 
+
+        frame.add(new SensorControl("💡", "Luz - " + area, "%", 0, 100, 1, 50,
+                v -> {
+                    try { broker.put(new LightSensorEvent("Light_01", area, (float) v)); }
+                    catch (InterruptedException _) { }
+                }));
+
+        frame.add(new SensorControl("🌡️", "Temp - " + area, "ºC", -10, 50, 1, 20,
+                v -> {
+                    try { broker.put(new TemperatureSensorEvent("Temp_01", area, (float) v)); }
+                    catch (InterruptedException _) { }
+                }));
+
+        frame.add(new SensorControl("🌱", "Solo - " + areaJardim, "%", 0, 100, 1, 50,
+                v -> {
+                    try { broker.put(new GroundMoistureSensorEvent("Gnd_01", areaJardim, (float) v)); }
+                    catch (InterruptedException _) { }
+                }));
+
+        frame.setLocation(500, 300);
         frame.pack();
-
     }
+
     public void open() {
         frame.setVisible(true);
     }
 
-    public void addFrameContent(){
-        frame.setLayout(new GridLayout(4,2));
-        JLabel titleLabel = new JLabel("ClientUI");
-		frame.add(titleLabel);
-		Areas area = Areas.LivingRoom;
-        SensorControl humiditySensor = new SensorControl( "💧", "Humidade - " + area, "%",
-            0, 100, 1, 50,
-            valor -> {
-                System.out.println("Mudou para: " + valor);
-            });
-        frame.add(humiditySensor);
-
-        // painel ventilador
-        JPanel painelVentilador = new JPanel();
-        painelVentilador.setLayout(new BorderLayout());
-
-        VentilatorIcon ventilator = new VentilatorIcon();
-        painelVentilador.add(ventilator, BorderLayout.CENTER);
-
-        JButton btnToggle = new JButton("Ligar Ventilador");
-
-        btnToggle.addActionListener(e -> {
-            boolean novoEstado = !ventilator.isAtivo();
-            ventilator.setAtivo(novoEstado);
-            btnToggle.setText(novoEstado ? "Desligar Ventilador" : "Ligar Ventilador");
-            System.out.println("Evento manual: Ventilador -> " + novoEstado);
-        });
-
-        painelVentilador.add(btnToggle, BorderLayout.SOUTH);
-        frame.add(painelVentilador);
+    public CorretorMensagens getBroker() {
+        return broker;
     }
 }
