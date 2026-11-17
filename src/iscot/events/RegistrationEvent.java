@@ -7,7 +7,7 @@ public class RegistrationEvent extends Event {
     private Type type;
 
     public RegistrationEvent(String deviceId, Areas area, Type type) {
-        
+
         super(deviceId, area);
         this.type = type;
     }

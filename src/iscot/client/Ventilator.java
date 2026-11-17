@@ -8,9 +8,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
+import javax.swing.*;
 
 import iscot.client.gui.LightIcon;
 import iscot.client.gui.VentilatorIcon;
@@ -61,13 +59,14 @@ public class Ventilator {
 			// TODO: for first phase: create an appropriate event hardcoded locally and change the GUI accordingly
 			System.out.println("--- Simulando a receção de um evento do servidor ---");
 
-			
+
 			AreaVentilationOrderEvent mockEvent = new AreaVentilationOrderEvent("Decider_01", area, true);
 
 			System.out.println("[Consumir Evento] Ordem de ventilação recebida. Ação ligar: " + mockEvent.isActionOn());
-
-			
-			ventilator.setLigado(mockEvent.isActionOn());
+			ventilator.setAtivo(mockEvent.isActionOn());
+			Thread.sleep(5000);
+			ventilator.setAtivo(!mockEvent.isActionOn());
+			System.out.println("[Consumir Evento] Ordem de ventilação recebida. Ação ligar: " + ventilator.isAtivo());
 		}
 	}
 }
