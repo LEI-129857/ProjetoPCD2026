@@ -1,73 +1,55 @@
 package iscot.client;
 
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.net.UnknownHostException;
-
-import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
-import iscot.client.gui.LightIcon;
 import iscot.client.gui.VentilatorIcon;
 import iscot.enums.Areas;
-import iscot.enums.Type;
 import iscot.events.AreaVentilationOrderEvent;
 
-public class Ventilator {
+public class Ventilator extends Thread {
+    private final CorretorMensagens broker;
+    private final Areas area;
+    private VentilatorIcon ventilator;
 
-	/**
-	 * 
-	 * @param server address and port
-	 * @param roomName: string
-	 * @throws IOException 
-	 * @throws UnknownHostException 
-	 * @throws NumberFormatException 
-	 * @throws InterruptedException 
-	 * @throws ClassNotFoundException 
-	 */
-	public static void main(String[] args) throws NumberFormatException, UnknownHostException, IOException, InterruptedException, ClassNotFoundException {
-		if(args.length!=3) {
-			System.err.println("Invalid arguments!");
-		}
-		else {
-			// TODO connect to server
-			
-			// TODO register with the server
-			Areas area=Areas.valueOf(args[2]);
-			
-			JFrame janela = new JFrame("Ventilador em "+area);
-			janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    public Ventilator(CorretorMensagens broker, Areas area) {
+        this.broker = broker;
+        this.area = area;
+        initGUI();
+    }
 
-		
-			
-			// Criar os componentes gráficos
-			JPanel painel=new JPanel();
-			painel.setLayout(new BorderLayout());
-			VentilatorIcon ventilator = new VentilatorIcon();
-			painel.add(ventilator,BorderLayout.CENTER);
-			janela.setContentPane(painel);
-			janela.setLocation(600, 400);
-			janela.setMinimumSize(janela.getSize());
-			janela.pack();
-			janela.setVisible(true);
+    private void initGUI() {
+        JFrame janela = new JFrame("Ventilador em " + area);
+        janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-			Thread.sleep(5000);
+        JPanel painel = new JPanel(new BorderLayout());
+        ventilator = new VentilatorIcon();
+        painel.add(ventilator, BorderLayout.CENTER);
 
-			// TODO: for first phase: create an appropriate event hardcoded locally and change the GUI accordingly
-			System.out.println("--- Simulando a receção de um evento do servidor ---");
+        janela.setContentPane(painel);
+        janela.setLocation(600, 400);
+        janela.pack();
+        janela.setVisible(true);
+    }
 
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                // TODO (fase 4/5): receber as ordens do servidor em vez da mesa local.
+                Object event = broker.get();
 
-			AreaVentilationOrderEvent mockEvent = new AreaVentilationOrderEvent("Decider_01", area, true);
-
-			System.out.println("[Consumir Evento] Ordem de ventilação recebida. Ação ligar: " + mockEvent.isActionOn());
-
-
-			ventilator.setLigado(mockEvent.isActionOn());
-		}
-	}
+                if (event instanceof AreaVentilationOrderEvent) {
+                    AreaVentilationOrderEvent e = (AreaVentilationOrderEvent) event;
+                    if (e.getArea() == this.area) {
+                        SwingUtilities.invokeLater(() -> ventilator.setLigado(e.isActionOn()));
+                    }
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 }

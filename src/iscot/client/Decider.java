@@ -1,42 +1,46 @@
 package iscot.client;
 
+import iscot.enums.AirConditioningMode;
+import iscot.events.AreaIrrigationOrderEvent;
+import iscot.events.AreaLightingOrderEvent;
+import iscot.events.AreaTemperatureOrderEvent;
 import iscot.events.GroundMoistureSensorEvent;
 import iscot.events.LightSensorEvent;
 import iscot.events.TemperatureSensorEvent;
 
 public class Decider extends Thread {
-    private CorretorMensagens table;
+    private final CorretorMensagens table;
+    private final CorretorMensagens saida;
+    private final String deviceId;
 
-    public Decider(CorretorMensagens table) {
+    public Decider(CorretorMensagens table, CorretorMensagens saida, String deviceId) {
         this.table = table;
+        this.saida = saida;
+        this.deviceId = deviceId;
     }
 
     @Override
     public void run() {
         try {
             while (true) {
-
                 Object event = this.table.get();
-
 
                 if (event instanceof TemperatureSensorEvent) {
                     TemperatureSensorEvent e = (TemperatureSensorEvent) event;
                     if (e.getValue() > 30) {
-                        System.out.println("[DECISÃO] O Decisor ligou o AC (FRIO) na " + e.getArea());
+                        saida.put(new AreaTemperatureOrderEvent(deviceId, e.getArea(), AirConditioningMode.Frio));
                     } else if (e.getValue() < 15) {
-                        System.out.println("[DECISÃO] O Decisor ligou o AC (QUENTE) na " + e.getArea());
+                        saida.put(new AreaTemperatureOrderEvent(deviceId, e.getArea(), AirConditioningMode.Aquecimento));
                     }
-                }
-                else if (event instanceof LightSensorEvent) {
+                } else if (event instanceof LightSensorEvent) {
                     LightSensorEvent e = (LightSensorEvent) event;
                     if (e.getValue() < 30) {
-                        System.out.println("[DECISÃO] O Decisor ACENDEU a Lâmpada na " + e.getArea());
+                        saida.put(new AreaLightingOrderEvent(deviceId, e.getArea(), true));
                     }
-                }
-                else if (event instanceof GroundMoistureSensorEvent) {
+                } else if (event instanceof GroundMoistureSensorEvent) {
                     GroundMoistureSensorEvent e = (GroundMoistureSensorEvent) event;
                     if (e.getValue() < 20) {
-                        System.out.println("[DECISÃO] O Decisor LIGOU a Rega no " + e.getArea());
+                        saida.put(new AreaIrrigationOrderEvent(deviceId, e.getArea(), true));
                     }
                 }
             }

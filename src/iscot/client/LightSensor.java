@@ -5,38 +5,36 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import iscot.client.gui.SensorControl;
 import iscot.enums.Areas;
-import iscot.events.LightSensorEvent;
 
 public class LightSensor {
 
-    public static void main(String[] args) throws NumberFormatException, InterruptedException {
-        if(args.length != 3) {
-            System.err.println("Invalid arguments!");
+    public static void main(String[] args) {
+        ClientArguments config = ClientArguments.parse(args, "iscot.client.LightSensor");
+        if (config == null) {
+            return;
         }
-        else {
-            Areas area = Areas.valueOf(args[2]);
+        Areas area = config.area();
 
-            JFrame janela = new JFrame("Luz em " + area);
-            janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        // TODO (fase 4/5): ligar a config.ip()/config.port() e registar o dispositivo.
 
-            JPanel painel = new JPanel();
-            painel.setLayout(new BorderLayout());
+        JFrame janela = new JFrame("Luz em " + area);
+        janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
+        JPanel painel = new JPanel();
+        painel.setLayout(new BorderLayout());
 
-            SensorControl sensorControl = new SensorControl("💡", "Luminosidade - " + area, "%",
-                    0, 100, 1, 50,
-                    valor -> {
+        SensorControl sensorControl = new SensorControl("", "Luminosidade - " + area, "%",
+                0, 100, 1, 50,
+                valor -> {
+                    // TODO (fase 5): enviar o evento para o servidor em vez de imprimir.
+                    System.out.println("[Publicar Evento] Area: " + area
+                            + " | Luminosidade: " + valor + "%");
+                });
 
-                        LightSensorEvent event = new LightSensorEvent("Sensor_Light_01", area, (float) valor);
-                        System.out.println("[Publicar Evento] Área: " + area + " | Luminosidade mudou para: " + valor + "%");
-                    });
-
-            painel.add(sensorControl, BorderLayout.CENTER);
-            janela.setContentPane(painel);
-            janela.setLocation(600, 400);
-            janela.setMinimumSize(janela.getSize());
-            janela.pack();
-            janela.setVisible(true);
-        }
+        painel.add(sensorControl, BorderLayout.CENTER);
+        janela.setContentPane(painel);
+        janela.setLocation(600, 400);
+        janela.pack();
+        janela.setVisible(true);
     }
 }

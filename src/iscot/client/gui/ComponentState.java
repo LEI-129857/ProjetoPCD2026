@@ -5,7 +5,7 @@ import javax.swing.*;
 
 public abstract class ComponentState extends JPanel {
 
-    private boolean ativo;
+    private volatile boolean ativo;
 
     protected ComponentState() {
         setPreferredSize(new Dimension(100, 100));
@@ -17,10 +17,12 @@ public abstract class ComponentState extends JPanel {
     }
 
     public final void setAtivo(boolean ativo) {
-        SwingUtilities.invokeLater(() -> {
-            this.ativo = ativo;
+        this.ativo = ativo;
+        if (SwingUtilities.isEventDispatchThread()) {
             repaint();
-        });
+        } else {
+            SwingUtilities.invokeLater(this::repaint);
+        }
     }
 
     protected final Color corEstado() {

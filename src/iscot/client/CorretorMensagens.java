@@ -38,7 +38,7 @@ public class CorretorMensagens {
         return retrievedData;
     }
 
-    public int getsize() {
+    public synchronized int getsize() {
         return this.mesa.size();
     }
 }
