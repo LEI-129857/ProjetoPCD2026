@@ -1,11 +1,13 @@
 package iscot.client;
 
 import java.awt.BorderLayout;
+import java.io.IOException;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import iscot.client.gui.SensorControl;
 import iscot.enums.Areas;
+import iscot.events.TemperatureSensorEvent;
 
 public class TemperatureSensor {
 
@@ -16,9 +18,15 @@ public class TemperatureSensor {
         }
         Areas area = config.area();
 
-        // TODO (fase 4/5): ligar a config.ip()/config.port() e registar o dispositivo.
+        ServerConnection connection;
+        try {
+            connection = ServerConnection.connect(config);
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("[TemperatureSensor] Falha na ligacao inicial: " + e.getMessage());
+            return;
+        }
 
-        JFrame janela = new JFrame("Temperatura em " + area);
+        JFrame janela = new JFrame("Temperatura em " + area + " [" + connection.getDeviceId() + "]");
         janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel painel = new JPanel();
@@ -27,9 +35,12 @@ public class TemperatureSensor {
         SensorControl sensorControl = new SensorControl("", "Temperatura - " + area, "ºC",
                 -10, 50, 1, 20,
                 valor -> {
-                    // TODO (fase 5): enviar o evento para o servidor em vez de imprimir.
-                    System.out.println("[Publicar Evento] Area: " + area
-                            + " | Temperatura: " + valor + "ºC");
+                    try {
+                        connection.send(new TemperatureSensorEvent(
+                                connection.getDeviceId(), area, (float) valor));
+                    } catch (IOException e) {
+                        System.err.println("[TemperatureSensor] Falha ao enviar evento: " + e.getMessage());
+                    }
                 });
 
         painel.add(sensorControl, BorderLayout.CENTER);

@@ -1,10 +1,12 @@
 package iscot.client;
 
 import java.awt.BorderLayout;
+import java.io.IOException;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import iscot.client.gui.SensorControl;
 import iscot.enums.Areas;
+import iscot.events.HumiditySensorEvent;
 
 public class HumiditySensor {
 
@@ -15,9 +17,15 @@ public class HumiditySensor {
         }
         Areas area = config.area();
 
-        // TODO (fase 4/5): ligar a config.ip()/config.port() e registar o dispositivo.
+        ServerConnection connection;
+        try {
+            connection = ServerConnection.connect(config);
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("[HumiditySensor] Falha na ligacao inicial: " + e.getMessage());
+            return;
+        }
 
-        JFrame janela = new JFrame("Humidade em " + area);
+        JFrame janela = new JFrame("Humidade em " + area + " [" + connection.getDeviceId() + "]");
         janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel painel = new JPanel();
@@ -26,9 +34,12 @@ public class HumiditySensor {
         SensorControl sensorControl = new SensorControl("", "Humidade - " + area, "%",
                 0, 100, 1, 50,
                 valor -> {
-                    // TODO (fase 5): enviar o evento para o servidor em vez de imprimir.
-                    System.out.println("[Publicar Evento] Area: " + area
-                            + " | Humidade: " + valor + "%");
+                    try {
+                        connection.send(new HumiditySensorEvent(
+                                connection.getDeviceId(), area, (float) valor));
+                    } catch (IOException e) {
+                        System.err.println("[HumiditySensor] Falha ao enviar evento: " + e.getMessage());
+                    }
                 });
 
         painel.add(sensorControl, BorderLayout.CENTER);

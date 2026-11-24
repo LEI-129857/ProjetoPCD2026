@@ -1,55 +1,56 @@
 package iscot.client;
 
 import java.awt.BorderLayout;
+import java.io.IOException;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 
 import iscot.client.gui.VentilatorIcon;
 import iscot.enums.Areas;
 import iscot.events.AreaVentilationOrderEvent;
+import iscot.events.Event;
 
-public class Ventilator extends Thread {
-    private final CorretorMensagens broker;
-    private final Areas area;
-    private VentilatorIcon ventilator;
+public class Ventilator {
 
-    public Ventilator(CorretorMensagens broker, Areas area) {
-        this.broker = broker;
-        this.area = area;
-        initGUI();
+    /**
+     * @param args IP PORT Area Tipo
+     */
+    public static void main(String[] args) {
+        ClientArguments config = ClientArguments.parse(args, "iscot.client.Ventilator");
+        if (config == null) {
+            return;
+        }
+
+        ServerConnection connection;
+        try {
+            connection = ServerConnection.connect(config);
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("[Ventilator] Falha na ligacao inicial: " + e.getMessage());
+            return;
+        }
+
+        abrir(config.area(), connection);
     }
 
-    private void initGUI() {
-        JFrame janela = new JFrame("Ventilador em " + area);
+    public static void abrir(Areas area, ServerConnection connection) {
+        JFrame janela = new JFrame("Ventilador em " + area + " [" + connection.getDeviceId() + "]");
         janela.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        JPanel painel = new JPanel(new BorderLayout());
-        ventilator = new VentilatorIcon();
+        JPanel painel = new JPanel();
+        painel.setLayout(new BorderLayout());
+        VentilatorIcon ventilator = new VentilatorIcon();
         painel.add(ventilator, BorderLayout.CENTER);
-
         janela.setContentPane(painel);
         janela.setLocation(600, 400);
         janela.pack();
         janela.setVisible(true);
-    }
 
-    @Override
-    public void run() {
-        try {
-            while (true) {
-                // TODO (fase 4/5): receber as ordens do servidor em vez da mesa local.
-                Object event = broker.get();
-
-                if (event instanceof AreaVentilationOrderEvent) {
-                    AreaVentilationOrderEvent e = (AreaVentilationOrderEvent) event;
-                    if (e.getArea() == this.area) {
-                        SwingUtilities.invokeLater(() -> ventilator.setLigado(e.isActionOn()));
-                    }
-                }
+        connection.startReceiving((Event event) -> {
+            if (event instanceof AreaVentilationOrderEvent ordem
+                    && ordem.getArea() == area) {
+                ventilator.setAtivo(ordem.isActionOn());
+                System.out.println("[Ventilator] Ordem recebida: ligado=" + ordem.isActionOn());
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        });
     }
 }

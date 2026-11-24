@@ -3,11 +3,17 @@ package iscot;
 import iscot.client.ClientArguments;
 import iscot.client.CorretorMensagens;
 import iscot.client.Decider;
+import iscot.client.ServerConnection;
 import iscot.client.Ventilator;
 import iscot.client.gui.SensorControl;
 import iscot.enums.Areas;
+import iscot.events.Event;
+import iscot.events.GroundMoistureSensorEvent;
+import iscot.events.LightSensorEvent;
+import iscot.events.TemperatureSensorEvent;
 
 import java.awt.GridLayout;
+import java.io.IOException;
 import javax.swing.JFrame;
 
 public final class IscoT {
@@ -21,48 +27,70 @@ public final class IscoT {
             return;
         }
 
+        ServerConnection connection;
+        try {
+            connection = ServerConnection.connect(config);
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("[IscoT] Falha na ligacao inicial ao servidor: " + e.getMessage());
+            return;
+        }
+
         switch (config.type()) {
-            case SENSOR -> abrirSensores(config.area());
-            case DECIDER -> iniciarDecisor();
-            case ACTUATOR -> iniciarAtuador(config.area());
-            default -> System.err.println("Tipo de dispositivo nao suportado: " + config.type());
+            case SENSOR -> abrirSensores(config.area(), connection);
+            case DECIDER -> iniciarDecisor(connection);
+            case ACTUATOR -> iniciarAtuador(config.area(), connection);
+            default -> {
+                System.err.println("Tipo de dispositivo nao suportado: " + config.type());
+                connection.close();
+            }
         }
     }
 
-    private static void abrirSensores(Areas area) {
-        JFrame janela = new JFrame("Sensores em " + area);
+    private static void abrirSensores(Areas area, ServerConnection connection) {
+        JFrame janela = new JFrame("Sensores em " + area + " [" + connection.getDeviceId() + "]");
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.setLayout(new GridLayout(1, 3, 10, 10));
 
         janela.add(new SensorControl("", "Luz - " + area, "%", 0, 100, 1, 50,
-                valor -> publicar("Luz", area, valor)));
+                valor -> publicar(connection, "Luz", area, valor)));
         janela.add(new SensorControl("", "Temperatura - " + area, "ºC", -10, 50, 1, 20,
-                valor -> publicar("Temperatura", area, valor)));
+                valor -> publicar(connection, "Temperatura", area, valor)));
         janela.add(new SensorControl("", "Solo - " + area, "%", 0, 100, 1, 50,
-                valor -> publicar("Solo", area, valor)));
+                valor -> publicar(connection, "Solo", area, valor)));
 
         janela.setLocation(600, 300);
         janela.pack();
         janela.setVisible(true);
     }
 
-    private static void publicar(String sensor, Areas area, double valor) {
-        // TODO (fase 5): enviar o evento para o servidor em vez de imprimir.
-        System.out.println("[Publicar Evento] " + sensor + " | Area: " + area + " | Valor: " + valor);
+    private static void publicar(ServerConnection connection, String sensor, Areas area, double valor) {
+        Event evento = switch (sensor) {
+            case "Luz" -> new LightSensorEvent(connection.getDeviceId(), area, (float) valor);
+            case "Temperatura" -> new TemperatureSensorEvent(connection.getDeviceId(), area, (float) valor);
+            case "Solo" -> new GroundMoistureSensorEvent(connection.getDeviceId(), area, (float) valor);
+            default -> null;
+        };
+        if (evento == null) {
+            System.err.println("[IscoT] Tipo de sensor desconhecido: " + sensor);
+            return;
+        }
+        try {
+            connection.send(evento);
+        } catch (IOException e) {
+            System.err.println("[IscoT] Falha ao enviar evento: " + e.getMessage());
+        }
     }
 
-    private static void iniciarDecisor() {
-        CorretorMensagens sensores = new CorretorMensagens();
-        CorretorMensagens ordens = new CorretorMensagens();
-        Decider decisor = new Decider(sensores, ordens, "Decisor-01");
-        decisor.setName("Decisor");
+    private static void iniciarDecisor(ServerConnection connection) {
+        Decider decisor = new Decider(connection);
+        decisor.setName("Decisor-" + connection.getDeviceId());
+        decisor.setDaemon(true);
         decisor.start();
+        System.out.println("[IscoT] Decisor ligado ao servidor com deviceId=" + connection.getDeviceId());
     }
 
-    private static void iniciarAtuador(Areas area) {
-        Ventilator ventilador = new Ventilator(new CorretorMensagens(), area);
-        ventilador.setName("Atuador-Ventilador");
-        ventilador.setDaemon(true);
-        ventilador.start();
+    private static void iniciarAtuador(Areas area, ServerConnection connection) {
+        Ventilator.abrir(area, connection);
+        System.out.println("[IscoT] Atuador ligado ao servidor com deviceId=" + connection.getDeviceId());
     }
 }
