@@ -14,10 +14,6 @@ public class ACIcon extends ComponentState {
 	public boolean isLigado() {
 	    return isAtivo();
 	}
-/** 
- * 
- * @param modo: valores 
- */
 	public void setModo(AirConditioningMode mode) {
 	    this.mode = mode;
 	    setAtivo(mode!=AirConditioningMode.Desligado);

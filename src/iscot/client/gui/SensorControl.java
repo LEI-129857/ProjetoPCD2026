@@ -2,6 +2,7 @@ package iscot.client.gui;
 
 
 import java.awt.BorderLayout;
+import java.util.Hashtable;
 import java.util.function.DoubleConsumer;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -49,9 +50,10 @@ public class SensorControl extends JPanel {
         this.unidade = unidade;
         this.atualizador = atualizador;
 
-        setBorder(BorderFactory.createTitledBorder(
-            icone + " " + nome
-        ));
+        String titulo = (icone == null || icone.isBlank())
+            ? nome
+            : icone + " " + nome;
+        setBorder(BorderFactory.createTitledBorder(titulo));
 
         int numeroPassos = (int) Math.round(
             (maximo - minimo) / passo
@@ -68,9 +70,20 @@ public class SensorControl extends JPanel {
         );
 
         slider = new JSlider(0, numeroPassos, passoInicial);
-        slider.setMajorTickSpacing(
-            Math.max(1, numeroPassos / 4)
-        );
+
+        int passoEtiqueta = Math.max(1, numeroPassos / 4);
+        Hashtable<Integer, JLabel> etiquetas = new Hashtable<>();
+        for (int i = 0; i <= numeroPassos; i += passoEtiqueta) {
+            etiquetas.put(i, new JLabel(formatarValor(minimo + i * passo)));
+        }
+        if (!etiquetas.containsKey(numeroPassos)) {
+            etiquetas.put(
+                numeroPassos,
+                new JLabel(formatarValor(minimo + numeroPassos * passo))
+            );
+        }
+        slider.setLabelTable(etiquetas);
+        slider.setMajorTickSpacing(passoEtiqueta);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
 
@@ -80,8 +93,6 @@ public class SensorControl extends JPanel {
         slider.addChangeListener(e -> {
             atualizarEtiqueta();
 
-            // Comunicar apenas quando o utilizador
-            // termina de arrastar o slider.
             if (!slider.getValueIsAdjusting()
                     && this.atualizador != null) {
                 this.atualizador.accept(getValor());
@@ -100,6 +111,18 @@ public class SensorControl extends JPanel {
                 unidade
             )
         );
+    }
+
+    private String formatarValor(double valor) {
+        int casas;
+        if (passo >= 1) {
+            casas = 0;
+        } else if (passo >= 0.1) {
+            casas = 1;
+        } else {
+            casas = 2;
+        }
+        return String.format("%." + casas + "f", valor);
     }
 
     public double getValor() {

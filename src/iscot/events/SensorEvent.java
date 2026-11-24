@@ -4,7 +4,7 @@ import iscot.enums.Areas;
 public class SensorEvent extends Event{
     private float value;
     public SensorEvent(String deviceId, Areas area, float value) {
-        
+
         super(deviceId, area);
         this.value = value;
     }
